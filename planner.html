@@ -1,0 +1,2108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Планировщик Меню</title>
+    <script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background-color: #3498db;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .main-container {
+            display: flex;
+            flex: 1;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            transition: all 0.3s;
+            overflow-y: auto;
+        }
+        
+        .sidebar-collapsed {
+            width: 60px;
+        }
+        
+        .sidebar-header {
+            padding: 0 20px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .toggle-sidebar {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+        }
+        
+        .menu-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .menu-item:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+        
+        .menu-item i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .menu-item-text {
+            white-space: nowrap;
+        }
+        
+        .sidebar-collapsed .menu-item-text {
+            display: none;
+        }
+        
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        
+        .week-range {
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #3498db;
+            padding: 10px;
+            background-color: #eaf2f8;
+            border-radius: 4px;
+        }
+        
+        .menu-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .menu-table th, .menu-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .menu-table th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            font-weight: bold;
+        }
+        
+        .dish-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+        }
+        
+        .meal-section {
+            margin-bottom: 30px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .meal-section h3 {
+            margin-top: 0;
+            background-color: #eaeaea;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            overflow: auto;
+        }
+        
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 5px;
+            width: 60%;
+            max-width: 700px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        .close-modal {
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #aaa;
+        }
+        
+        .close-modal:hover {
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input, 
+        .form-group select, 
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+        
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .btn-success {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .btn-warning {
+            background-color: #f39c12;
+            color: white;
+        }
+        
+        .approval-status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+        }
+        
+        .approval-status.approved {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        
+        .approval-status.rejected {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        
+        .approval-status.pending {
+            background-color: #fff3cd;
+            border-color: #ffeeba;
+            color: #856404;
+        }
+        
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .status-icon {
+            font-size: 24px;
+        }
+        
+        .status-comment {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: rgba(255,255,255,0.5);
+            border-radius: 4px;
+            font-style: italic;
+        }
+        
+        .hidden {
+            display: none;
+        }
+
+        /* Стили для повторяющихся блюд */
+        .repeat-highlight {
+            background-color: #ffeaa7;
+        }
+
+        /* Стили для добавления нескольких блюд */
+        .dish-tag {
+            display: inline-block;
+            background-color: #e0f7fa;
+            padding: 2px 6px;
+            margin: 2px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .dish-tag-remove {
+            margin-left: 4px;
+            cursor: pointer;
+            color: #e74c3c;
+        }
+
+        .add-dish-btn {
+            margin-top: 5px;
+            padding: 4px 8px;
+            font-size: 0.8em;
+        }
+
+        /* Стили для иконки вместо текста "Выбор блюда" */
+        .select-placeholder-icon {
+            color: #95a5a6;
+            font-size: 0.9em;
+        }
+        
+        /* Навигация по таблицам */
+        .table-navigation {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            background-color: #f5f5f5;
+            padding: 10px;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .table-navigation button {
+            flex: 1;
+        }
+        
+        .table-navigation button.active {
+            background-color: #2980b9;
+            transform: scale(1.05);
+        }
+        
+        /* Темная тема */
+        body.dark-theme {
+            background-color: #1e1e1e;
+            color: #eee;
+        }
+        
+        body.dark-theme .header {
+            background-color: #2980b9;
+        }
+        
+        body.dark-theme .sidebar {
+            background-color: #1a252f;
+        }
+        
+        body.dark-theme .content {
+            background-color: #2b2b2b;
+            color: #eee;
+        }
+        
+        body.dark-theme .meal-section {
+            background-color: #2c2c2c;
+            box-shadow: 0 1px 3px rgba(255,255,255,0.05);
+        }
+        
+        body.dark-theme .menu-table th {
+            background-color: #3d3d3d;
+            color: #eee;
+        }
+        
+        body.dark-theme .menu-table th,
+        body.dark-theme .menu-table td {
+            border-color: #444;
+            background-color: #1f1f1f;
+            color: #f0f0f0;
+        }
+        
+        body.dark-theme .dish-select {
+            background-color: #333;
+            color: #fff;
+            border-color: #555;
+        }
+        
+        body.dark-theme .meal-section h3 {
+            background-color: #3d3d3d;
+            color: #eee;
+        }
+        
+        body.dark-theme .week-range {
+            background-color: #1a3a4a;
+            color: #74b9ff;
+        }
+
+        body.dark-theme .repeat-highlight {
+            background-color: #5a4a00;
+        }
+
+        body.dark-theme .dish-tag {
+            background-color: #004d40;
+            color: #fff;
+        }
+        
+        body.dark-theme .table-navigation {
+            background-color: #2b2b2b;
+        }
+        
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        /* Новые стили для улучшений */
+        .search-filter-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .search-box, .category-filter {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .stats-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            margin: 0 0 5px 0;
+            font-size: 1em;
+            color: #7f8c8d;
+        }
+        
+        .stat-card p {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        body.dark-theme .stat-card {
+            background-color: #2c2c2c;
+            box-shadow: 0 1px 3px rgba(255,255,255,0.05);
+        }
+        
+        body.dark-theme .stat-card h3 {
+            color: #bdc3c7;
+        }
+        
+        body.dark-theme .stat-card p {
+            color: #f0f0f0;
+        }
+        
+        .day-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+            justify-content: center;
+        }
+        
+        .day-actions button {
+            padding: 3px 6px;
+            font-size: 0.8em;
+        }
+        
+        .copy-modal-content {
+            max-width: 500px;
+        }
+        
+        .copy-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .copy-option {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .copy-option:hover {
+            background-color: #f5f5f5;
+        }
+        
+        body.dark-theme .copy-option:hover {
+            background-color: #3d3d3d;
+        }
+        
+        .copy-option.selected {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        
+        .quick-fill-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .quick-fill-option {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .quick-fill-option:hover {
+            background-color: #f5f5f5;
+        }
+        
+        body.dark-theme .quick-fill-option:hover {
+            background-color: #3d3d3d;
+        }
+        
+        .quick-fill-option.selected {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 60px;
+                overflow: hidden;
+                transition: max-height 0.3s;
+            }
+            
+            .sidebar.expanded {
+                max-height: 1000px;
+            }
+            
+            .sidebar-collapsed {
+                width: 100%;
+            }
+            
+            .sidebar-header {
+                padding: 10px 15px;
+            }
+            
+            .toggle-sidebar {
+                transform: rotate(0deg);
+                transition: transform 0.3s;
+            }
+            
+            .sidebar.expanded .toggle-sidebar {
+                transform: rotate(180deg);
+            }
+            
+            .table-navigation {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .table-navigation button {
+                flex: 1 1 100px;
+                font-size: 0.8em;
+                padding: 5px;
+            }
+
+            /* Адаптивные стили для новых элементов */
+            .copy-options, .quick-fill-options {
+                grid-template-columns: 1fr;
+            }
+            
+            .stat-card {
+                min-width: 120px;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="header">
+        <h2>Планировщик Меню</h2>
+        <div class="theme-toggle">
+            <label for="themeSwitch">Тёмная тема</label>
+            <input type="checkbox" id="themeSwitch">
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span class="menu-item-text">Меню</span>
+                <button class="toggle-sidebar" id="toggleSidebar">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+            
+            <div class="menu-item" onclick="showDatePicker()">
+                <i class="fas fa-calendar-alt"></i>
+                <span class="menu-item-text">Выбор даты</span>
+            </div>
+            
+            <div class="menu-item" onclick="showNewDishForm()">
+                <i class="fas fa-plus-circle"></i>
+                <span class="menu-item-text">Добавить блюдо</span>
+            </div>
+
+            <div class="menu-item" onclick="showNewCategoryForm()">
+                <i class="fas fa-tags"></i>
+                <span class="menu-item-text">Добавить категорию</span>
+            </div>
+            
+            <div class="menu-item" onclick="scrollToTable('breakfast-table')">
+                <i class="fas fa-coffee"></i>
+                <span class="menu-item-text">К завтраку</span>
+            </div>
+            
+            <div class="menu-item" onclick="scrollToTable('lunch-table')">
+                <i class="fas fa-utensils"></i>
+                <span class="menu-item-text">К обеду</span>
+            </div>
+            
+            <div class="menu-item" onclick="scrollToTable('dinner-table')">
+                <i class="fas fa-moon"></i>
+                <span class="menu-item-text">К ужину</span>
+            </div>
+            
+            <div class="menu-item" onclick="saveMenu()">
+                <i class="fas fa-save"></i>
+                <span class="menu-item-text">Сохранить меню</span>
+            </div>
+            
+            <div class="menu-item" onclick="loadMenu()">
+                <i class="fas fa-folder-open"></i>
+                <span class="menu-item-text">Загрузить меню</span>
+            </div>
+            
+            <div class="menu-item" onclick="sendForApproval()">
+                <i class="fas fa-paper-plane"></i>
+                <span class="menu-item-text">Отправить на согласование</span>
+            </div>
+            
+            <div class="menu-item" onclick="exportToExcel()">
+                <i class="fas fa-file-excel"></i>
+                <span class="menu-item-text">Экспорт в Excel</span>
+            </div>
+            
+            <div class="menu-item" onclick="clearMenu()">
+                <i class="fas fa-trash-alt"></i>
+                <span class="menu-item-text">Очистить меню</span>
+            </div>
+            
+            <div class="approval-status hidden" id="approval-status">
+                <div class="status-header">
+                    <div class="status-icon" id="status-icon">⏳</div>
+                    <h3 id="status-title">Статус согласования</h3>
+                </div>
+                <div id="status-date"></div>
+                <div class="status-comment" id="status-comment"></div>
+            </div>
+        </div>
+        
+        <div class="content" id="mainContent">
+            <div id="datePickerSection">
+                <h2>Выбор даты</h2>
+                <div class="form-group">
+                    <label for="menu-date">Выберите дату:</label>
+                    <input type="date" id="menu-date" class="form-control">
+                </div>
+                <div class="week-range" id="week-range"></div>
+            </div>
+            
+            <div id="menuSection" class="hidden">
+                <h2>Составленное меню</h2>
+                <div class="week-range" id="week-range-menu"></div>
+                
+                <!-- Добавляем контейнер для поиска и фильтрации -->
+                <div class="search-filter-container">
+                    <input type="text" id="dish-search" class="search-box" placeholder="Поиск блюд..." oninput="filterDishes()">
+                    <select id="category-filter" class="category-filter" onchange="filterDishes()">
+                        <option value="">Все категории</option>
+                    </select>
+                    <button onclick="resetFilters()" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Сбросить
+                    </button>
+                </div>
+                
+                <!-- Добавляем контейнер для статистики -->
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <h3>Всего блюд</h3>
+                        <p id="total-dishes">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Уникальных блюд</h3>
+                        <p id="unique-dishes">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Повторений</h3>
+                        <p id="repeat-dishes">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Заполнено</h3>
+                        <p id="filled-cells">0%</p>
+                    </div>
+                </div>
+                
+                <!-- Навигация по таблицам -->
+                <div id="tableNavigation" class="table-navigation">
+                    <button onclick="scrollToTable('breakfast-table')" class="btn btn-primary">
+                        <i class="fas fa-coffee"></i> Завтрак
+                    </button>
+                    <button onclick="scrollToTable('lunch-table')" class="btn btn-primary">
+                        <i class="fas fa-utensils"></i> Обед
+                    </button>
+                    <button onclick="scrollToTable('dinner-table')" class="btn btn-primary">
+                        <i class="fas fa-moon"></i> Ужин
+                    </button>
+                </div>
+                
+                <div class="meal-section">
+                    <h3>ЗАВТРАК</h3>
+                    <table class="menu-table" id="breakfast-table">
+                        <thead>
+                            <tr>
+                                <th>Категория</th>
+                                <th>Понедельник</th>
+                                <th>Вторник</th>
+                                <th>Среда</th>
+                                <th>Четверг</th>
+                                <th>Пятница</th>
+                                <th>Суббота</th>
+                                <th>Воскресенье</th>
+                            </tr>
+                        </thead>
+                        <tbody id="breakfast-body">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="meal-section">
+                    <h3>ОБЕД / НОЧНОЙ ОБЕД</h3>
+                    <table class="menu-table" id="lunch-table">
+                        <thead>
+                            <tr>
+                                <th>Категория</th>
+                                <th>Понедельник</th>
+                                <th>Вторник</th>
+                                <th>Среда</th>
+                                <th>Четверг</th>
+                                <th>Пятница</th>
+                                <th>Суббота</th>
+                                <th>Воскресенье</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lunch-body">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="meal-section">
+                    <h3>УЖИН</h3>
+                    <table class="menu-table" id="dinner-table">
+                        <thead>
+                            <tr>
+                                <th>Категория</th>
+                                <th>Понедельник</th>
+                                <th>Вторник</th>
+                                <th>Среда</th>
+                                <th>Четверг</th>
+                                <th>Пятница</th>
+                                <th>Суббота</th>
+                                <th>Воскресенье</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dinner-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="newDishSection" class="hidden">
+                <h2>Добавить новое блюдо</h2>
+                <div class="form-group">
+                    <label for="new-dish-name">Название блюда:</label>
+                    <input id="new-dish-name" placeholder="Введите название" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="new-dish-category">Категория:</label>
+                    <select id="new-dish-category" class="form-control">
+                        <option value=""><i class="fas fa-utensils select-placeholder-icon"></i></option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="new-dish-recipe">Рецепт/Примечания:</label>
+                    <textarea id="new-dish-recipe" placeholder="Введите рецепт или примечания" rows="3" class="form-control"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="new-dish-photo">Фотография блюда:</label>
+                    <input type="file" id="new-dish-photo" accept="image/*" class="form-control">
+                </div>
+                
+                <div class="form-actions">
+                    <button onclick="saveNewDish()" class="btn btn-primary">Сохранить</button>
+                    <button onclick="hideNewDishForm()" class="btn btn-secondary">Отмена</button>
+                </div>
+            </div>
+
+            <div id="newCategorySection" class="hidden">
+                <h2>Добавить новую категорию</h2>
+                <div class="form-group">
+                    <label for="new-category-name">Название категории:</label>
+                    <input id="new-category-name" placeholder="Введите название категории" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="new-category-meal-type">Тип приема пищи:</label>
+                    <select id="new-category-meal-type" class="form-control">
+                        <option value="breakfast">Завтрак</option>
+                        <option value="lunch">Обед / Ночной обед</option>
+                        <option value="dinner">Ужин</option>
+                    </select>
+                </div>
+                
+                <div class="form-actions">
+                    <button onclick="saveNewCategory()" class="btn btn-primary">Сохранить</button>
+                    <button onclick="hideNewCategoryForm()" class="btn btn-secondary">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dish-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="modal-dish-name"></h2>
+            <div class="dish-info">
+                <div class="dish-photo">
+                    <img id="modal-dish-photo" src="" alt="Фото блюда">
+                </div>
+                <div class="dish-recipe">
+                    <h3>Технологическая карта:</h3>
+                    <p id="modal-dish-recipe"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Добавляем новое модальное окно для копирования блюд -->
+    <div id="copy-modal" class="modal">
+        <div class="modal-content copy-modal-content">
+            <span class="close-modal" onclick="hideCopyModal()">&times;</span>
+            <h2>Копирование блюд</h2>
+            <p>Выберите дни для копирования:</p>
+            
+            <div class="copy-options" id="copy-options">
+                <!-- Опции будут заполнены JavaScript -->
+            </div>
+            
+            <div class="form-actions">
+                <button onclick="executeCopy()" class="btn btn-primary">Копировать</button>
+                <button onclick="hideCopyModal()" class="btn btn-secondary">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Добавляем новое модальное окно для быстрого заполнения -->
+    <div id="quick-fill-modal" class="modal">
+        <div class="modal-content copy-modal-content">
+            <span class="close-modal" onclick="hideQuickFillModal()">&times;</span>
+            <h2>Быстрое заполнение</h2>
+            <p>Выберите день для заполнения:</p>
+            
+            <div class="quick-fill-options" id="quick-fill-options">
+                <!-- Опции будут заполнены JavaScript -->
+            </div>
+            
+            <div class="form-actions">
+                <button onclick="executeQuickFill()" class="btn btn-primary">Заполнить</button>
+                <button onclick="hideQuickFillModal()" class="btn btn-secondary">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Оригинальные категории без приписок (используются для сопоставления)
+        const originalMealCategories = {
+            breakfast: [
+                "Каша 1", "Каша 2", "Крупы", "Яйца 1 шт.", "Яйца 2 шт.", 
+                "Горячий", "Горячий 2", "Хлеб * (3)", "Выпечка", "Закуски", 
+                "Варенье", "Фрукты", "Йогурт", "Напитки", "Сок"
+            ],
+            lunch: [
+                "Суп 1", "Суп 2", "Салаты", "Основное блюдо 1", 
+                "Основное блюдо 2", "Основное блюдо 3", "Гарниры", "Овощи",
+                "Фрукты", "Выпечка", "Хлеб", "Напитки", "Соки"
+            ],
+            dinner: [
+                "Суп 1", "Суп 2", "Салаты", "Основное блюдо 1", 
+                "Основное блюдо 2", "Основное блюдо 3", "Гарниры", "Овощи",
+                "Фрукты", "Выпечка", "Хлеб", "Соки", "Напитки"
+            ]
+        };
+
+        // Данные о блюдах (название, рецепт, фото)
+        const dishesData = {};
+
+        // Примеры блюд по категориям (пока используем оригинальные названия категорий)
+        // Будет переделано функцией prepareCategoriesAndDishes
+        let dishesByCategory = {
+            "Каша 1": ["Кукурузная каша", "Рисовая каша", "Овсяная каша", "Гречневая каша", "Молочная каша с вермишелью", "Пшённая каша"],
+            "Каша 2": ["Пшённая каша", "Манная каша", "Ячневая каша", "Пшеничная каша", "Рисовая каша"],
+            "Крупы": ["Сухие завтраки из 2 злаков, мюсли"],
+            "Яйца 1 шт.": ["Вареные яйца"],
+            "Яйца 2 шт.": ["Омлет", "Омлет с грибами", "Скрамбл омлет", "Омлет с помидорами", "Омлет с зеленью"],
+            "Горячий": ["Сосиска в тесте", "Сосиски", "Сосиски в томатном луковом соусе", "Сосиски в барбекю соусе", "Сосиски гриль"],
+            "Горячий 2": ["Запеканка из макарон с соусом бешамель", "Капустный пирог", "Пирог с картофелем и луком", "Тыквенный пирог", "Вареники с картофелем", "Кулебяка с рисом и яйцом", "Макароны с жареным луком и морковью", "Тыква запеченная с морковью", "Картофельные котлеты", "Тушеные микс овощи", "Запеченный картофель", "Чечевица с зеленью и чесноком", "Красная фасоль в томатном соусе", "Тушеные овощи"],
+            "Хлеб * (3)": ["Белый, цельнозерновой, хлеб в ассортименте"],
+            "Выпечка": ["Блины", "Оладушки с яблоками", "Творожная запеканка", "Гренки", "Оладушки", "2 вида десерта"],
+            "Закуски": ["Сыр, колбаса"],
+            "Варенье": ["Масло сливочное / Джем/ Мёд"],
+            "Фрукты": ["3 вида фруктов"],
+            "Йогурт": ["Кефир", "Йогурт", "Ряженка"],
+            "Напитки": ["Чай, кофе, молоко, горячий шоколад", "Чай, кофе, молоко", "Чай, Кофе, Молоко"],
+            "Сок": ["Сок в ассортименте"],
+            "Соки": ["Компот, холодный чай, каркаде"],
+            
+            // Обеденные и ужинные блюда (пока с оригинальными названиями категорий)
+            "Суп 1": ["Суп Харчо с говяжьим мясом", "Суп Картофельный с фрикадельками", "Суп Борщ с фасолью", "Суп Рассольник", "Овощной суп", "Куриный суп с вермишелью", "Гороховый суп", "Куриный суп с клецками", "Чечевичный суп", "Суп Манпар", "Суп Лапша по-домашнему", "Сурпа (бульон) бауырсаки", "Суп рыбный (уха)", "Мексиканский куриный суп с тыквой"],
+            "Суп 2": ["Луковый крем-суп", "Крем-суп из брокколи и шпината", "Кукурузный крем-суп", "Крем-суп из Цветной капусты", "Крем-суп из зеленого горошка", "Картофельный крем-суп", "Морковный крем-суп", "Суп-пюре из стручковой фасоли", "Овощной крем суп", "Грибной суп-пюре", "Томатный крем-суп", "Крем суп Тыквенный", "Крем-суп свекольный"],
+            "Салаты": ["Свежие помидоры / огурцы", "Овощной салат с сухариками и пекинской капустой", "Салат с курицей и корейской морковкой", "Салат \"Винегрет\"", "Крабовый салат", "Фасолевый салат с луком и помидорами", "Салат из Квашеной капусты с зеленью", "Свекольный салат с чесноком", "Салат \"Столичный\"", "Салат из редиса с маринованным луком", "Салат Фунчоза с овощами по-корейски", "Свекольный салат по-корейски", "Салат \"Оливье\"", "Морковный салат с брокколи", "Картофельный салат с грибами и зеленым горошком", "Морковь по-корейски со спаржей", "Свекольный сатал", "Салат \"Цезарь\"", "Салат капустный с редисом и зеленью", "Салат по-корейски из моркови с капустой", "Салат свекла по-корейски", "Салат морская капуста с морковью", "Картофельный салат с квашеной капустой, маринованными огурцами и луком", "Салат капустный с болгарским перцем и маслинами", "Салат с печенью огурцами и морковью", "Салат с морской капустой и яйцами", "Салат свекольный с кукурузой", "Салат с фунчозой и баклажанами", "Салат «Мехико»"],
+            "Основное блюдо 1": ["Тефтели из говядины в томатном соусе", "Плов с бараниной"],
+            "Основное блюдо 2": ["Лагман из говядины", "Манты из говядины с луково-морковной подливе"],
+            "Основное блюдо 3": ["Котлеты из говядины с жареным луком", "Гуляш из говядины"],
+            "Гарниры": ["Макароны с зеленью", "Гречка", "Рис золотой", "Вермишель жареная", "Макароны с жареным луком", "Рис с куркумой", "Макароны", "Картофель гратен", "Отварной Картофель", "Рис с овощами", "Перловка с морковью", "Картофель запеченный", "Рис по-арабски", "Рис припущенный", "Гороховое пюре", "Рис отварной"],
+            "Овощи": ["Тушеная овощная смесь", "Тушенная капуста и морковь", "Запеченная тыква", "Овощная смесь на пару", "Шпинат с луком", "Запеченная свекла", "Рататуй", "Отварная свекла с зеленью", "Смешанные овощи на пару", "Овощное рагу", "Стручковая фасоль с жареным луком", "Цветной капуста с болгарским перцем", "Тушеная капуста", "Морковь со стручковой фасолью"],
+            "Хлеб": ["Хлеб белый, цельнозерновой, хлеб в ассортименте", "Белый, цельнозерновой хлеб в ассортименте", "Белый, цельнозерновой, хлеб в ассортименте, Баурсаки"]
+        };
+
+        // Константа для хранения категорий с приписками
+        let mealCategoriesWithSuffix = {};
+        let allCategories = []; // Будет заполнено после добавления суффиксов
+
+        // Функция для добавления приписок к категориям и обновления dishesByCategory
+        function prepareCategoriesAndDishes() {
+            const newDishesByCategory = {};
+            const suffixes = {
+                breakfast: " (завтрак)",
+                lunch: " (обед)",
+                dinner: " (ужин)"
+            };
+
+            // 1. Создаем категории с суффиксами
+            for (const mealType in originalMealCategories) {
+                mealCategoriesWithSuffix[mealType] = originalMealCategories[mealType].map(category => {
+                    return category + suffixes[mealType];
+                });
+            }
+
+            // 2. Обновляем ключи в dishesByCategory
+            for (const originalCategory in dishesByCategory) {
+                let foundMealType = null;
+                for (const mealType in originalMealCategories) {
+                    if (originalMealCategories[mealType].includes(originalCategory)) {
+                        foundMealType = mealType;
+                        break;
+                    }
+                }
+
+                if (foundMealType) {
+                    const newCategoryName = originalCategory + suffixes[foundMealType];
+                    newDishesByCategory[newCategoryName] = dishesByCategory[originalCategory];
+                } else {
+                    // Если категория не найдена ни в одном из оригинальных приемов пищи, 
+                    // просто переносим ее как есть (это может быть пользовательская категория)
+                    newDishesByCategory[originalCategory] = dishesByCategory[originalCategory];
+                }
+            }
+            // Перезаписываем dishesByCategory глобально
+            dishesByCategory = newDishesByCategory;
+
+            // 3. Генерируем полный список всех уникальных категорий для dropdown'ов (с суффиксами)
+            allCategories = [];
+            for (const mealType in mealCategoriesWithSuffix) {
+                allCategories.push(...mealCategoriesWithSuffix[mealType]);
+            }
+            allCategories = [...new Set(allCategories)].sort(); // Уникальные и отсортированные
+        }
+        
+        const weekdays = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
+        const DISH_SEPARATOR = "##"; // Разделитель для нескольких блюд в одной ячейке
+        const repeatColors = [
+            "#ffeaa7", // жёлтый
+            "#74b9ff", // голубой
+            "#fab1a0", // розовый
+            "#a29bfe", // фиолет
+            "#81ecec", // бирюза
+            "#55efc4", // мята
+            "#fd79a8"  // розовый ярче
+        ];
+
+        // Структура данных меню
+        const menu = {
+            breakfast: {},
+            lunch: {},
+            dinner: {}
+        };
+
+        // Переменные для копирования блюд
+        let copySource = {
+            mealType: null,
+            category: null,
+            dayIndex: null
+        };
+        
+        let selectedDaysForCopy = [];
+        let selectedDayForQuickFill = null;
+
+        // Инициализация структуры меню
+        function initializeMenu() {
+            for (const mealType in mealCategoriesWithSuffix) { // Используем категории с суффиксами
+                mealCategoriesWithSuffix[mealType].forEach(category => {
+                    menu[mealType][category] = Array(7).fill("");
+                });
+            }
+        }
+
+        // Инициализация выпадающего списка категорий для формы добавления нового блюда
+        function initializeNewDishCategoryDropdown() {
+            const newDishCategorySelect = document.getElementById("new-dish-category");
+            newDishCategorySelect.innerHTML = '<option value=""><i class="fas fa-utensils select-placeholder-icon"></i></option>';
+            
+            const mealTypeLabels = {
+                breakfast: "ЗАВТРАК",
+                lunch: "ОБЕД / НОЧНОЙ ОБЕД",
+                dinner: "УЖИН"
+            };
+
+            for (const mealType in mealCategoriesWithSuffix) {
+                // Создаем optgroup для формы добавления нового блюда
+                const optgroup = document.createElement("optgroup");
+                optgroup.label = mealTypeLabels[mealType];
+                newDishCategorySelect.appendChild(optgroup);
+
+                // Добавляем категории внутри optgroup
+                mealCategoriesWithSuffix[mealType].sort().forEach(category => {
+                    const option = document.createElement("option");
+                    option.value = category;
+                    option.textContent = category;
+                    optgroup.appendChild(option);
+                });
+            }
+        }
+
+        // Инициализация фильтра категорий
+        function initializeCategoryFilter() {
+            const filterSelect = document.getElementById("category-filter");
+            const categories = new Set();
+            
+            // Собираем все уникальные категории (без суффиксов)
+            for (const mealType in originalMealCategories) {
+                originalMealCategories[mealType].forEach(category => {
+                    categories.add(category);
+                });
+            }
+            
+            // Сортируем и добавляем в фильтр
+            Array.from(categories).sort().forEach(category => {
+                const option = document.createElement("option");
+                option.value = category;
+                option.textContent = category;
+                filterSelect.appendChild(option);
+            });
+        }
+
+        // Отрисовка таблиц меню
+        function renderMenuTables() {
+            renderMealTable("breakfast");
+            renderMealTable("lunch");
+            renderMealTable("dinner");
+            updateWeekRange();
+            highlightRepeats();
+            updateStats();
+        }
+
+        // Подсветка повторяющихся блюд
+        function highlightRepeats() {
+            const dishCounts = {};
+            
+            // Считаем все блюда во всех приемах пищи
+            ['breakfast', 'lunch', 'dinner'].forEach(mealType => {
+                for (const category in menu[mealType]) {
+                    menu[mealType][category].forEach(day => {
+                        if (day) {
+                            day.split(DISH_SEPARATOR).forEach(dish => {
+                                if (dish) {
+                                    dishCounts[dish] = (dishCounts[dish] || 0) + 1;
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+            
+            // Подсвечиваем ячейки с повторяющимися блюдами
+            document.querySelectorAll('.dish-tag').forEach(tag => {
+                const dish = tag.textContent.replace('×', '').trim();
+                if (dishCounts[dish] > 1) {
+                    tag.classList.add('repeat-highlight');
+                } else {
+                    tag.classList.remove('repeat-highlight');
+                }
+            });
+        }
+
+        // Отрисовка таблицы для конкретного приема пищи
+        function renderMealTable(mealType) {
+            const tbody = document.getElementById(`${mealType}-body`);
+            tbody.innerHTML = "";
+            
+            // Если для какого-то типа еды нет категорий, пропускаем
+            if (!mealCategoriesWithSuffix[mealType] || mealCategoriesWithSuffix[mealType].length === 0) {
+                return;
+            }
+
+            mealCategoriesWithSuffix[mealType].forEach(category => { // Используем категории с суффиксами
+                const tr = document.createElement("tr");
+                
+                // Ячейка с категорией
+                const th = document.createElement("th");
+                th.textContent = category.replace(/ \(.*?\)$/, '');
+                tr.appendChild(th);
+                
+                // Ячейки с блюдами для каждого дня
+                const dishesForCategory = menu[mealType][category] || Array(7).fill(""); 
+                dishesForCategory.forEach((cellContent, dayIndex) => {
+                    const td = document.createElement("td");
+                    
+                    // Контейнер для выбранных блюд
+                    const dishesContainer = document.createElement("div");
+                    dishesContainer.className = "dishes-container";
+                    
+                    // Отображаем уже выбранные блюда
+                    if (cellContent) {
+                        cellContent.split(DISH_SEPARATOR).forEach(dish => {
+                            if (dish) {
+                                const dishTag = document.createElement("span");
+                                dishTag.className = "dish-tag";
+                                dishTag.innerHTML = `${dish} <span class="dish-tag-remove" onclick="removeDish(this, '${mealType}', '${category}', ${dayIndex})">&times;</span>`;
+                                dishesContainer.appendChild(dishTag);
+                            }
+                        });
+                    }
+                    
+                    // Выпадающий список для добавления новых блюд
+                    const selectContainer = document.createElement("div");
+                    const select = document.createElement("select");
+                    select.className = "dish-select";
+                    select.dataset.mealType = mealType;
+                    select.dataset.category = category;
+                    select.dataset.dayIndex = dayIndex;
+                    
+                    // Добавляем иконку вместо текста "Выберите блюдо"
+                    const emptyOption = document.createElement("option");
+                    emptyOption.value = "";
+                    emptyOption.innerHTML = '<i class="fas fa-utensils select-placeholder-icon"></i>';
+                    select.appendChild(emptyOption);
+                    
+                    // Добавляем блюда для этой категории
+                    if (dishesByCategory[category]) {
+                        dishesByCategory[category].sort().forEach(dish => {
+                            const option = document.createElement("option");
+                            option.value = dish;
+                            option.textContent = dish;
+                            select.appendChild(option);
+                        });
+                    }
+                    
+                    // Обработчик изменения выбора
+                    select.addEventListener("change", function() {
+                        const mealType = this.dataset.mealType;
+                        const category = this.dataset.category;
+                        const dayIndex = parseInt(this.dataset.dayIndex);
+                        const selectedDish = this.value;
+                        
+                        if (selectedDish) {
+                            // Добавляем новое блюдо к существующим
+                            const currentDishes = menu[mealType][category][dayIndex] || "";
+                            const dishesArray = currentDishes ? currentDishes.split(DISH_SEPARATOR) : [];
+                            
+                            // Проверяем, что блюдо еще не добавлено в эту ячейку
+                            if (!dishesArray.includes(selectedDish)) {
+                                dishesArray.push(selectedDish);
+                                menu[mealType][category][dayIndex] = dishesArray.join(DISH_SEPARATOR);
+                                
+                                // Перерисовываем таблицу
+                                renderMenuTables();
+                            }
+                            
+                            // Сбрасываем выбор
+                            this.value = "";
+                        }
+                    });
+                    
+                    selectContainer.appendChild(select);
+                    dishesContainer.appendChild(selectContainer);
+                    td.appendChild(dishesContainer);
+                    
+                    // Добавляем кнопки действий для дня
+                    const actionsDiv = document.createElement("div");
+                    actionsDiv.className = "day-actions";
+                    
+                    // Кнопка копирования из этой ячейки
+                    if (cellContent) {
+                        const copyBtn = document.createElement("button");
+                        copyBtn.className = "btn btn-primary";
+                        copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+                        copyBtn.title = "Копировать блюда из этого дня";
+                        copyBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            showCopyModal(mealType, category, dayIndex);
+                        };
+                        actionsDiv.appendChild(copyBtn);
+                    }
+                    
+                    // Кнопка быстрого заполнения дня
+                    const fillBtn = document.createElement("button");
+                    fillBtn.className = "btn btn-success";
+                    fillBtn.innerHTML = '<i class="fas fa-magic"></i>';
+                    fillBtn.title = "Быстро заполнить этот день";
+                    fillBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        showQuickFillModal(mealType, category);
+                    };
+                    actionsDiv.appendChild(fillBtn);
+                    
+                    td.appendChild(actionsDiv);
+                    tr.appendChild(td);
+                });
+                
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Удаление блюда из ячейки
+        function removeDish(element, mealType, category, dayIndex) {
+            const dishTag = element.parentElement;
+            const dishToRemove = dishTag.textContent.trim().replace('×', '').trim();
+            
+            const currentDishes = menu[mealType][category][dayIndex].split(DISH_SEPARATOR);
+            const newDishes = currentDishes.filter(dish => dish.trim() !== dishToRemove).join(DISH_SEPARATOR);
+            
+            menu[mealType][category][dayIndex] = newDishes;
+            renderMenuTables();
+        }
+
+        // Прокрутка к таблице
+        function scrollToTable(tableId) {
+            const table = document.getElementById(tableId);
+            if (table) {
+                // Добавляем небольшой отступ сверху
+                const yOffset = -20;
+                const y = table.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                
+                window.scrollTo({
+                    top: y,
+                    behavior: 'smooth'
+                });
+                
+                // Временная подсветка таблицы
+                table.style.boxShadow = '0 0 0 2px #3498db';
+                setTimeout(() => {
+                    table.style.boxShadow = '';
+                }, 1000);
+            }
+        }
+
+        // Обновление активной кнопки навигации
+        function updateActiveTableButton() {
+            const sections = [
+                {id: 'breakfast-table', button: 'breakfast'},
+                {id: 'lunch-table', button: 'lunch'},
+                {id: 'dinner-table', button: 'dinner'}
+            ];
+            
+            sections.forEach(section => {
+                const table = document.getElementById(section.id);
+                if (table) {
+                    const rect = table.getBoundingClientRect();
+                    const buttons = document.querySelectorAll(`.table-navigation button`);
+                    
+                    buttons.forEach(button => {
+                        if (button.getAttribute('onclick').includes(section.id)) {
+                            if (rect.top <= 100 && rect.bottom >= 100) {
+                                button.classList.add('active');
+                            } else {
+                                button.classList.remove('active');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        // Показать информацию о блюде в модальном окне
+        function showDishInfo(dishName) {
+            const dish = dishesData[dishName] || { recipe: "Рецепт не указан", photo: "" };
+            
+            document.getElementById("modal-dish-name").textContent = dishName;
+            document.getElementById("modal-dish-recipe").textContent = dish.recipe || "Рецепт не указан";
+            
+            const photoElement = document.getElementById("modal-dish-photo");
+            if (dish.photo) {
+                photoElement.src = dish.photo;
+                photoElement.style.display = "block";
+            } else {
+                photoElement.style.display = "none";
+                photoElement.src = ""; // Очищаем src, если фото нет
+            }
+            
+            document.getElementById("dish-modal").style.display = "block";
+        }
+
+        // Закрыть модальное окно
+        document.querySelector(".close-modal").onclick = function() {
+            document.getElementById("dish-modal").style.display = "none";
+        };
+
+        // Закрыть модальное окно при клике вне его
+        window.onclick = function(event) {
+            if (event.target == document.getElementById("dish-modal")) {
+                document.getElementById("dish-modal").style.display = "none";
+            }
+            if (event.target == document.getElementById("copy-modal")) {
+                hideCopyModal();
+            }
+            if (event.target == document.getElementById("quick-fill-modal")) {
+                hideQuickFillModal();
+            }
+        };
+
+        // Показать/скрыть форму добавления нового блюда
+        function showNewDishForm() {
+            document.getElementById("datePickerSection").classList.add("hidden");
+            document.getElementById("menuSection").classList.add("hidden");
+            document.getElementById("newCategorySection").classList.add("hidden");
+            document.getElementById("newDishSection").classList.remove("hidden");
+        }
+        
+        function hideNewDishForm() {
+            document.getElementById("newDishSection").classList.add("hidden");
+            document.getElementById("menuSection").classList.remove("hidden");
+        }
+
+        // Показать/скрыть форму добавления новой категории
+        function showNewCategoryForm() {
+            document.getElementById("datePickerSection").classList.add("hidden");
+            document.getElementById("menuSection").classList.add("hidden");
+            document.getElementById("newDishSection").classList.add("hidden");
+            document.getElementById("newCategorySection").classList.remove("hidden");
+        }
+        
+        function hideNewCategoryForm() {
+            document.getElementById("newCategorySection").classList.add("hidden");
+            document.getElementById("menuSection").classList.remove("hidden");
+        }
+
+        // Сохранение нового блюда
+        function saveNewDish() {
+            const name = document.getElementById("new-dish-name").value.trim();
+            const category = document.getElementById("new-dish-category").value;
+            const recipe = document.getElementById("new-dish-recipe").value.trim();
+            const photoInput = document.getElementById("new-dish-photo");
+            
+            if (!name) {
+                alert("Пожалуйста, введите название блюда");
+                return;
+            }
+            
+            if (!category) {
+                alert("Пожалуйста, выберите категорию");
+                return;
+            }
+            
+            // Проверяем, существует ли уже блюдо с таким названием (независимо от категории)
+            if (dishesData[name]) {
+                alert("Блюдо с таким названием уже существует. Измените название или выберите другое.");
+                return;
+            }
+
+            // Добавляем блюдо в dishesByCategory
+            if (!dishesByCategory[category]) {
+                dishesByCategory[category] = [];
+            }
+            dishesByCategory[category].push(name);
+            
+            // Сохраняем данные о блюде
+            dishesData[name] = {
+                recipe: recipe || "Рецепт не указан",
+                photo: ""
+            };
+            
+            // Сохраняем фото, если оно было выбрано
+            if (photoInput.files && photoInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    dishesData[name].photo = e.target.result;
+                    // После сохранения фото, обновляем таблицы и скрываем форму
+                    renderMenuTables();
+                    hideNewDishForm();
+                };
+                reader.readAsDataURL(photoInput.files[0]);
+            } else {
+                // Если фото не выбрано, сразу обновляем таблицы и скрываем форму
+                renderMenuTables();
+                hideNewDishForm();
+            }
+            
+            // Очищаем форму
+            document.getElementById("new-dish-name").value = "";
+            document.getElementById("new-dish-category").value = "";
+            document.getElementById("new-dish-recipe").value = "";
+            document.getElementById("new-dish-photo").value = "";
+            
+            alert(`Блюдо "${name}" успешно добавлено!`);
+        }
+
+        // Сохранение новой категории
+        function saveNewCategory() {
+            const name = document.getElementById("new-category-name").value.trim();
+            const mealType = document.getElementById("new-category-meal-type").value;
+            
+            if (!name) {
+                alert("Пожалуйста, введите название категории");
+                return;
+            }
+            
+            // Проверяем, что категория с таким названием еще не существует
+            const suffix = mealType === "breakfast" ? " (завтрак)" : 
+                          mealType === "lunch" ? " (обед)" : " (ужин)";
+            const fullCategoryName = name + suffix;
+            
+            if (mealCategoriesWithSuffix[mealType].includes(fullCategoryName)) {
+                alert("Категория с таким названием уже существует для этого типа приема пищи");
+                return;
+            }
+            
+            // Добавляем категорию
+            originalMealCategories[mealType].push(name);
+            mealCategoriesWithSuffix[mealType].push(fullCategoryName);
+            dishesByCategory[fullCategoryName] = [];
+            
+            // Обновляем меню
+            menu[mealType][fullCategoryName] = Array(7).fill("");
+            
+            // Перестраиваем все категории
+            prepareCategoriesAndDishes();
+            initializeNewDishCategoryDropdown();
+            initializeCategoryFilter();
+            renderMenuTables();
+            hideNewCategoryForm();
+            
+            document.getElementById("new-category-name").value = "";
+            alert(`Категория "${name}" успешно добавлена!`);
+        }
+
+        // Очистка всего меню
+        function clearMenu() {
+            if (confirm("Вы уверены, что хотите полностью очистить меню? Это удалит все запланированные блюда.")) {
+                initializeMenu();
+                renderMenuTables();
+                alert("Меню очищено!");
+            }
+        }
+
+        // Сохранение меню в localStorage
+        function saveMenu() {
+            localStorage.setItem("savedMenu", JSON.stringify(menu));
+            localStorage.setItem("dishesByCategory", JSON.stringify(dishesByCategory));
+            localStorage.setItem("dishesData", JSON.stringify(dishesData));
+            alert("Меню успешно сохранено!");
+        }
+
+        // Загрузка меню из localStorage
+        function loadMenu() {
+            const savedMenu = localStorage.getItem("savedMenu");
+            const savedDishesByCategory = localStorage.getItem("dishesByCategory");
+            const savedDishesData = localStorage.getItem("dishesData");
+            
+            if (savedDishesData) {
+                // Важно загрузить dishesData перед dishesByCategory
+                // Очищаем текущие данные перед загрузкой
+                for (const key in dishesData) {
+                    delete dishesData[key];
+                }
+                Object.assign(dishesData, JSON.parse(savedDishesData));
+            }
+
+            if (savedDishesByCategory) {
+                // Очищаем текущие данные перед загрузкой
+                for (const key in dishesByCategory) {
+                    delete dishesByCategory[key];
+                }
+                Object.assign(dishesByCategory, JSON.parse(savedDishesByCategory));
+            }
+            
+            // Перезапускаем подготовку категорий, чтобы они были с суффиксами
+            prepareCategoriesAndDishes(); 
+
+            // Инициализируем пустое меню с новыми категориями (с суффиксами)
+            initializeMenu();
+
+            if (savedMenu) {
+                const loadedMenu = JSON.parse(savedMenu);
+                // Глубоко копируем загруженные данные в текущую структуру menu
+                for (const mealType in loadedMenu) {
+                    if (menu[mealType]) { // Убедимся, что такой тип еды существует
+                        for (const category in loadedMenu[mealType]) {
+                            // Проверяем, существует ли эта категория в mealCategoriesWithSuffix[mealType]
+                            if (mealCategoriesWithSuffix[mealType] && mealCategoriesWithSuffix[mealType].includes(category)) {
+                                menu[mealType][category] = loadedMenu[mealType][category];
+                            }
+                        }
+                    }
+                }
+            }
+            
+            renderMenuTables();
+            initializeNewDishCategoryDropdown();
+            initializeCategoryFilter();
+            updateApprovalStatus();
+            showMenuSection();
+            
+            alert("Меню успешно загружено!");
+        }
+
+        // Обновление отображения диапазона недели
+        function updateWeekRange() {
+            const dateInput = document.getElementById("menu-date");
+            if (!dateInput.value) {
+                document.getElementById("week-range").textContent = "Выберите дату для отображения недели";
+                document.getElementById("week-range-menu").textContent = "Выберите дату для отображения недели";
+                return;
+            }
+            
+            const date = new Date(dateInput.value);
+            // getDay() возвращает 0 для воскресенья, 1 для понедельника...
+            // Чтобы понедельник был первым днем недели (индекс 0), корректируем:
+            const dayOfWeek = date.getDay(); // 0 (ВС) - 6 (СБ)
+            const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Расчет для понедельника текущей недели
+            
+            const monday = new Date(date.setDate(diff));
+            monday.setHours(0, 0, 0, 0); // Обнуляем время, чтобы избежать проблем с датами
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            sunday.setHours(23, 59, 59, 999); // Устанавливаем конец дня
+
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            const weekRangeStr = `Неделя: ${monday.toLocaleDateString('ru-RU', options)} - ${sunday.toLocaleDateString('ru-RU', options)}`;
+            document.getElementById("week-range").textContent = weekRangeStr;
+            document.getElementById("week-range-menu").textContent = weekRangeStr;
+        }
+
+        // Экспорт в Excel
+        function exportToExcel() {
+            const weekRange = document.getElementById("week-range-menu").textContent;
+
+            // Создаем новую рабочую книгу и единственный лист
+            const wb = XLSX.utils.book_new();
+            const ws_name = "Планировщик Меню"; // Имя для одного листа
+            const ws_data = [];
+            const merges = []; // Массив для объединения ячеек
+
+            // Определяем максимальное количество столбцов (Категория + 7 дней = 8 столбцов)
+            const maxCols = 8; // Категория + Пн, Вт, Ср, Чт, Пт, Сб, Вс
+
+            // 1. Добавляем заголовок недели
+            ws_data.push(["Планировщик Меню на неделю: " + weekRange]);
+            // Объединяем ячейки для заголовка недели (A1 до H1, если 8 столбцов)
+            merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: maxCols - 1 } });
+            ws_data.push([]); // Пустая строка для разделения
+            let currentRow = 2; // Отслеживаем текущую строку для объединения ячеек
+
+            // Функция для получения данных из таблицы
+            function getTableData(mealType, title) {
+                const table = document.getElementById(`${mealType}-table`);
+                if (!table) return [];
+
+                const tableData = [];
+
+                // Добавляем заголовок приема пищи
+                tableData.push([title]);
+                // Объединяем ячейки для заголовка приема пищи
+                merges.push({ s: { r: currentRow, c: 0 }, e: { r: currentRow, c: maxCols - 1 } });
+                currentRow++;
+
+                // Извлекаем заголовки столбцов (дни недели и Категория)
+                const headerRow = [];
+                table.querySelectorAll('thead th').forEach(th => {
+                    headerRow.push(th.textContent.trim());
+                });
+                tableData.push(headerRow);
+                currentRow++;
+
+                // Извлекаем данные из строк таблицы
+                table.querySelectorAll('tbody tr').forEach(row => {
+                    const rowData = [];
+                    rowData.push(row.querySelector('th').textContent.trim()); // Категория
+                    row.querySelectorAll('td').forEach(cell => {
+                        const dishes = [];
+                        cell.querySelectorAll('.dish-tag').forEach(tag => {
+                            dishes.push(tag.textContent.replace('×', '').trim());
+                        });
+                        rowData.push(dishes.join(', '));
+                    });
+                    // Добавляем пустые ячейки, если строка короче maxCols
+                    while (rowData.length < maxCols) {
+                        rowData.push('');
+                    }
+                    tableData.push(rowData);
+                    currentRow++;
+                });
+                tableData.push([]); // Пустая строка после каждой секции
+                currentRow++;
+                return tableData;
+            }
+
+            // Добавляем данные для каждого приема пищи
+            ws_data.push(...getTableData("breakfast", "Завтрак"));
+            ws_data.push(...getTableData("lunch", "Обед и Ночной обед"));
+            ws_data.push(...getTableData("dinner", "Ужин"));
+
+            // Создаем лист из массива данных
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+            // Применяем объединения ячеек
+            ws['!merges'] = merges;
+
+            // Добавляем лист в рабочую книгу
+            XLSX.utils.book_append_sheet(wb, ws, ws_name);
+
+            // Записываем рабочую книгу в бинарный формат
+            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+
+            // Функция для преобразования строки в ArrayBuffer
+            function s2ab(s) {
+                const buf = new ArrayBuffer(s.length);
+                const view = new Uint8Array(buf);
+                for (let i = 0; i !== s.length; ++i) view[i] = s.charCodeAt(i) & 0xFF;
+                return buf;
+            }
+
+            // Создаем и скачиваем файл Excel
+            saveAs(new Blob([s2ab(wbout)], { type: "application/octet-stream" }), "Планировщик_Меню.xlsx");
+        }
+
+        // Отправка на согласование
+        function sendForApproval() {
+            // Проверяем, что меню не пустое
+            let isEmpty = true;
+            for (const mealType in menu) {
+                for (const category in menu[mealType]) {
+                    if (menu[mealType][category].some(day => day && day.trim() !== "")) {
+                        isEmpty = false;
+                        break;
+                    }
+                }
+                if (!isEmpty) break;
+            }
+            
+            if (isEmpty) {
+                alert("Меню пустое. Добавьте блюда перед отправкой на согласование.");
+                return;
+            }
+            
+            // Создаем глубокую копию меню для отправки
+            const menuCopy = JSON.parse(JSON.stringify(menu));
+            
+            const payload = {
+                menu: menuCopy,
+                dishesData: JSON.parse(JSON.stringify(dishesData)),
+                dishesByCategory: JSON.parse(JSON.stringify(dishesByCategory)),
+                timestamp: new Date().toISOString()
+            };
+            
+            try {
+                localStorage.setItem("pendingMenu", JSON.stringify(payload));
+                
+                const approvalData = {
+                    status: "pending",
+                    timestamp: new Date().toISOString(),
+                    comment: ""
+                };
+                localStorage.setItem("menuApprovalStatus", JSON.stringify(approvalData));
+                
+                const channel = new BroadcastChannel('menu_approval');
+                channel.postMessage({
+                    type: 'new_pending_menu',
+                    data: payload
+                });
+                
+                alert("Меню отправлено на согласование администратору!");
+                updateApprovalStatus();
+            } catch (e) {
+                alert("Ошибка при отправке меню: " + e.message);
+                console.error(e);
+            }
+        }
+        
+        // Обновление статуса согласования
+        function updateApprovalStatus() {
+            const statusData = localStorage.getItem("menuApprovalStatus");
+            const statusElement = document.getElementById("approval-status");
+            const statusIcon = document.getElementById("status-icon");
+            const statusTitle = document.getElementById("status-title");
+            const statusDate = document.getElementById("status-date");
+            const statusComment = document.getElementById("status-comment");
+            
+            if (!statusData) {
+                statusElement.classList.add("hidden");
+                return;
+            }
+            
+            const { status, timestamp, comment } = JSON.parse(statusData);
+            
+            statusElement.classList.remove("hidden", "approved", "rejected", "pending");
+            statusElement.classList.add(status);
+            
+            const date = new Date(timestamp);
+            const dateString = date.toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            if (status === "approved") {
+                statusIcon.textContent = "✅";
+                statusTitle.textContent = "Меню согласовано";
+                statusDate.textContent = `Дата согласования: ${dateString}`;
+                statusComment.textContent = comment || "";
+            } else if (status === "rejected") {
+                statusIcon.textContent = "❌";
+                statusTitle.textContent = "Меню отклонено";
+                statusDate.textContent = `Дата отклонения: ${dateString}`;
+                statusComment.textContent = comment || "";
+            } else {
+                statusIcon.textContent = "⏳";
+                statusTitle.textContent = "Ожидает согласования";
+                statusDate.textContent = `Отправлено: ${dateString}`;
+                statusComment.textContent = "";
+            }
+        }
+        
+        // Показать раздел меню
+        function showMenuSection() {
+            document.getElementById("datePickerSection").classList.add("hidden");
+            document.getElementById("newDishSection").classList.add("hidden");
+            document.getElementById("newCategorySection").classList.add("hidden");
+            document.getElementById("menuSection").classList.remove("hidden");
+        }
+        
+        // Показать выбор даты
+        function showDatePicker() {
+            document.getElementById("menuSection").classList.add("hidden");
+            document.getElementById("newDishSection").classList.add("hidden");
+            document.getElementById("newCategorySection").classList.add("hidden");
+            document.getElementById("datePickerSection").classList.remove("hidden");
+        }
+        
+        // Переключение бокового меню
+        function toggleSidebar() {
+            const sidebar = document.getElementById("sidebar");
+            const toggleBtn = document.getElementById("toggleSidebar");
+            
+            if (window.innerWidth <= 768) {
+                // Для мобильных - переключаем класс expanded
+                sidebar.classList.toggle("expanded");
+            } else {
+                // Для десктопов - переключаем класс sidebar-collapsed
+                sidebar.classList.toggle("sidebar-collapsed");
+                
+                // Меняем иконку кнопки
+                if (sidebar.classList.contains("sidebar-collapsed")) {
+                    toggleBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                } else {
+                    toggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                }
+            }
+        }
+
+        // Функции для работы с копированием блюд
+        function showCopyModal(mealType, category, dayIndex) {
+            copySource = { mealType, category, dayIndex };
+            selectedDaysForCopy = [];
+            
+            const optionsContainer = document.getElementById("copy-options");
+            optionsContainer.innerHTML = '';
+            
+            weekdays.forEach((day, idx) => {
+                if (idx !== dayIndex) { // Не показываем текущий день
+                    const option = document.createElement("div");
+                    option.className = "copy-option";
+                    option.textContent = day;
+                    option.dataset.dayIndex = idx;
+                    
+                    option.addEventListener("click", function() {
+                        this.classList.toggle("selected");
+                        const dayIdx = parseInt(this.dataset.dayIndex);
+                        
+                        if (this.classList.contains("selected")) {
+                            selectedDaysForCopy.push(dayIdx);
+                        } else {
+                            selectedDaysForCopy = selectedDaysForCopy.filter(d => d !== dayIdx);
+                        }
+                    });
+                    
+                    optionsContainer.appendChild(option);
+                }
+            });
+            
+            document.getElementById("copy-modal").style.display = "block";
+        }
+        
+        function hideCopyModal() {
+            document.getElementById("copy-modal").style.display = "none";
+        }
+        
+        function executeCopy() {
+            if (selectedDaysForCopy.length === 0) {
+                alert("Выберите хотя бы один день для копирования");
+                return;
+            }
+            
+            const sourceDishes = menu[copySource.mealType][copySource.category][copySource.dayIndex];
+            
+            selectedDaysForCopy.forEach(dayIndex => {
+                menu[copySource.mealType][copySource.category][dayIndex] = sourceDishes;
+            });
+            
+            renderMenuTables();
+            hideCopyModal();
+            alert("Блюда успешно скопированы!");
+        }
+
+        // Функции для быстрого заполнения
+        function showQuickFillModal(mealType, category) {
+            selectedDayForQuickFill = null;
+            
+            const optionsContainer = document.getElementById("quick-fill-options");
+            optionsContainer.innerHTML = '';
+            
+            weekdays.forEach((day, idx) => {
+                const option = document.createElement("div");
+                option.className = "quick-fill-option";
+                option.textContent = day;
+                option.dataset.dayIndex = idx;
+                
+                option.addEventListener("click", function() {
+                    // Снимаем выделение с других вариантов
+                    document.querySelectorAll(".quick-fill-option").forEach(opt => {
+                        opt.classList.remove("selected");
+                    });
+                    
+                    this.classList.add("selected");
+                    selectedDayForQuickFill = parseInt(this.dataset.dayIndex);
+                });
+                
+                optionsContainer.appendChild(option);
+            });
+            
+            document.getElementById("quick-fill-modal").style.display = "block";
+        }
+        
+        function hideQuickFillModal() {
+            document.getElementById("quick-fill-modal").style.display = "none";
+        }
+        
+        function executeQuickFill() {
+            if (selectedDayForQuickFill === null) {
+                alert("Выберите день для заполнения");
+                return;
+            }
+            
+            // Копируем из понедельника (день 0) в выбранный день
+            for (const mealType in menu) {
+                for (const category in menu[mealType]) {
+                    menu[mealType][category][selectedDayForQuickFill] = 
+                        menu[mealType][category][0]; // 0 - понедельник
+                }
+            }
+            
+            renderMenuTables();
+            hideQuickFillModal();
+            alert(`День "${weekdays[selectedDayForQuickFill]}" успешно заполнен по образцу понедельника!`);
+        }
+
+        // Функции для фильтрации и поиска
+        function filterDishes() {
+            const searchText = document.getElementById("dish-search").value.toLowerCase();
+            const categoryFilter = document.getElementById("category-filter").value;
+            
+            document.querySelectorAll('.dish-tag').forEach(tag => {
+                const dish = tag.textContent.replace('×', '').trim().toLowerCase();
+                const cell = tag.closest('td');
+                const category = cell ? cell.closest('tr').querySelector('th').textContent.trim() : '';
+                
+                const matchesSearch = searchText === '' || dish.includes(searchText);
+                const matchesCategory = categoryFilter === '' || category.includes(categoryFilter.replace(/ \(.*?\)$/, ''));
+                
+                if (matchesSearch && matchesCategory) {
+                    tag.style.display = 'inline-block';
+                    if (cell) cell.style.display = '';
+                    if (cell) cell.closest('tr').style.display = '';
+                } else {
+                    tag.style.display = 'none';
+                    // Скрываем ячейку, если в ней нет видимых блюд
+                    const hasVisibleDishes = Array.from(cell.querySelectorAll('.dish-tag'))
+                        .some(t => t.style.display !== 'none');
+                    if (!hasVisibleDishes) cell.style.display = 'none';
+                    
+                    // Скрываем строку, если все ее ячейки скрыты
+                    const row = cell.closest('tr');
+                    const hasVisibleCells = Array.from(row.querySelectorAll('td'))
+                        .some(c => c.style.display !== 'none');
+                    if (!hasVisibleCells) row.style.display = 'none';
+                }
+            });
+            
+            updateStats();
+        }
+        
+        function resetFilters() {
+            document.getElementById("dish-search").value = '';
+            document.getElementById("category-filter").value = '';
+            filterDishes();
+        }
+
+        // Функция для обновления статистики
+        function updateStats() {
+            const allDishes = [];
+            const uniqueDishes = new Set();
+            let repeatCount = 0;
+            let filledCells = 0;
+            let totalCells = 0;
+            
+            // Собираем данные по всем блюдам
+            ['breakfast', 'lunch', 'dinner'].forEach(mealType => {
+                for (const category in menu[mealType]) {
+                    menu[mealType][category].forEach((day, dayIndex) => {
+                        totalCells++;
+                        if (day && day.trim() !== "") {
+                            filledCells++;
+                            day.split(DISH_SEPARATOR).forEach(dish => {
+                                if (dish.trim()) {
+                                    allDishes.push(dish.trim());
+                                    uniqueDishes.add(dish.trim());
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+            
+            // Считаем повторения
+            const dishCounts = {};
+            allDishes.forEach(dish => {
+                dishCounts[dish] = (dishCounts[dish] || 0) + 1;
+                if (dishCounts[dish] > 1) {
+                    repeatCount++;
+                }
+            });
+            
+            // Обновляем статистику
+            document.getElementById("total-dishes").textContent = allDishes.length;
+            document.getElementById("unique-dishes").textContent = uniqueDishes.size;
+            document.getElementById("repeat-dishes").textContent = repeatCount;
+            document.getElementById("filled-cells").textContent = 
+                totalCells > 0 ? Math.round((filledCells / totalCells) * 100) + '%' : '0%';
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById("menu-date").valueAsDate = new Date();
+            
+            prepareCategoriesAndDishes();
+            initializeMenu();
+            initializeNewDishCategoryDropdown();
+            initializeCategoryFilter();
+            loadMenu();
+            updateApprovalStatus();
+            
+            // Инициализация переключателя темы
+            const themeSwitch = document.getElementById("themeSwitch");
+            
+            function applyTheme(theme) {
+                document.body.classList.remove("light-theme", "dark-theme");
+                document.body.classList.add(`${theme}-theme`);
+                localStorage.setItem("theme", theme);
+                themeSwitch.checked = theme === "dark";
+            }
+            
+            themeSwitch.addEventListener("change", () => {
+                const theme = themeSwitch.checked ? "dark" : "light";
+                applyTheme(theme);
+            });
+            
+            const savedTheme = localStorage.getItem("theme") || "light";
+            applyTheme(savedTheme);
+            
+            // Обработчики для кнопок
+            document.getElementById("toggleSidebar").addEventListener("click", toggleSidebar);
+            document.getElementById("menu-date").addEventListener("change", function() {
+                updateWeekRange();
+                updateStats();
+            });
+            
+            // Закрытие меню при клике вне его (для мобильных)
+            document.addEventListener('click', function(e) {
+                const sidebar = document.getElementById("sidebar");
+                if (window.innerWidth <= 768 && 
+                    !sidebar.contains(e.target) && 
+                    e.target.id !== 'toggleSidebar') {
+                    sidebar.classList.remove("expanded");
+                }
+            });
+            
+            // Обработчики для пунктов меню
+            document.querySelectorAll(".menu-item").forEach(item => {
+                item.addEventListener("click", function() {
+                    if (window.innerWidth <= 768) {
+                        document.getElementById("sidebar").classList.remove("expanded");
+                    }
+                    const clickHandler = this.getAttribute("onclick");
+                    if (clickHandler) {
+                        eval(clickHandler);
+                    }
+                });
+            });
+            
+            // Для мобильных устройств - автоматическое сворачивание меню
+            if (window.innerWidth <= 768) {
+                document.getElementById("sidebar").classList.add("sidebar-collapsed");
+                document.getElementById("toggleSidebar").innerHTML = '<i class="fas fa-chevron-right"></i>';
+            }
+            
+            // Подписка на обновления статуса через BroadcastChannel
+            const channel = new BroadcastChannel('menu_approval');
+            channel.onmessage = function(event) {
+                if (event.data.type === 'status_update') {
+                    localStorage.setItem("menuApprovalStatus", JSON.stringify(event.data.data));
+                    updateApprovalStatus();
+                }
+            };
+            
+            // Обновление активной кнопки навигации при прокрутке
+            window.addEventListener('scroll', function() {
+                updateActiveTableButton();
+                updateStats();
+            });
+        });
+    </script>
+</body>
+</html>
