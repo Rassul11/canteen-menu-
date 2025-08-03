@@ -604,6 +604,25 @@
                 }
             };
         });
+const webAppUrl = "https://script.google.com/macros/s/https://docs.google.com/spreadsheets/d/1C_tVNIgZkErUd_NgFYvEVHuY2BNqrYmyOePMWYcfNMY/edit?gid=0#gid=0/exec";
+
+function loadMenuFromServer() {
+  fetch(webAppUrl)
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.menu) {
+        console.log("Получено меню:", data.menu);
+        // Вставь свою функцию отрисовки сюда:
+        renderMenu(data.menu);
+      } else {
+        alert("Меню пока не отправлено.");
+      }
+    })
+    .catch(err => {
+      console.error("Ошибка при получении меню:", err);
+      alert("Не удалось загрузить меню");
+    });
+}
     </script>
 </body>
 </html>

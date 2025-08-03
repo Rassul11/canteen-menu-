@@ -2103,6 +2103,30 @@
                 updateStats();
             });
         });
+const webAppUrl = "https://script.google.com/macros/s/https://docs.google.com/spreadsheets/d/1C_tVNIgZkErUd_NgFYvEVHuY2BNqrYmyOePMWYcfNMY/edit?gid=0#gid=0/exec";
+
+function sendMenuToServer(menuData) {
+  fetch(webAppUrl, {
+    method: "POST",
+    body: JSON.stringify({
+      status: "pending",   // или "черновик"
+      comment: "",         // если есть комментарий — сюда
+      menu: menuData       // сам JSON-объект меню
+    }),
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+  .then(res => res.text())
+  .then(txt => {
+    console.log("Ответ от сервера:", txt);
+    alert("Меню успешно отправлено!");
+  })
+  .catch(err => {
+    console.error("Ошибка при отправке:", err);
+    alert("Ошибка при отправке меню");
+  });
+}
     </script>
 </body>
 </html>
